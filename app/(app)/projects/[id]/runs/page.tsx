@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Badge, RUN_TONES } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
+import { UserCircle2 } from 'lucide-react';
 import { formatRelative } from '@/lib/utils/format';
 import NewRunForm from './new-run-form';
 import type { ResultStatus, RunStatus } from '@/lib/supabase/database.types';
@@ -20,25 +21,30 @@ export default async function RunsPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  await requireUser();
+  const { userId } = await requireUser();
   const supabase = await createClient();
 
-  const [{ data: runs }, { data: plans }, { data: cases }] = await Promise.all([
-    supabase
-      .from('test_runs')
-      .select(
-        'id, name, status, environment, started_at, completed_at, created_at, test_run_results(status)'
-      )
-      .eq('project_id', id)
-      .order('created_at', { ascending: false }),
-    supabase.from('test_plans').select('id, name').eq('project_id', id).order('name'),
-    supabase
-      .from('test_cases')
-      .select('id, title')
-      .eq('project_id', id)
-      .eq('status', 'active')
-      .order('title'),
-  ]);
+  const [{ data: runs }, { data: plans }, { data: cases }, { data: memberRows }] =
+    await Promise.all([
+      supabase
+        .from('test_runs')
+        .select(
+          'id, name, status, environment, started_at, completed_at, created_at, test_run_results(status, assigned_to)'
+        )
+        .eq('project_id', id)
+        .order('created_at', { ascending: false }),
+      supabase.from('test_plans').select('id, name').eq('project_id', id).order('name'),
+      supabase
+        .from('test_cases')
+        .select('id, title')
+        .eq('project_id', id)
+        .eq('status', 'active')
+        .order('title'),
+      supabase
+        .from('project_members')
+        .select('profiles(id, full_name)')
+        .eq('project_id', id),
+    ]);
 
   type RunRow = {
     id: string;
@@ -48,10 +54,14 @@ export default async function RunsPage({
     started_at: string | null;
     completed_at: string | null;
     created_at: string;
-    test_run_results: { status: ResultStatus }[] | null;
+    test_run_results: { status: ResultStatus; assigned_to: string | null }[] | null;
   };
 
   const runRows = (runs ?? []) as unknown as RunRow[];
+  type MemberRow = { profiles: { id: string; full_name: string } | null };
+  const members = ((memberRows ?? []) as unknown as MemberRow[])
+    .map((m) => m.profiles)
+    .filter((p): p is { id: string; full_name: string } => Boolean(p));
 
   return (
     <div className="space-y-6">
@@ -67,6 +77,7 @@ export default async function RunsPage({
             projectId={id}
             plans={plans ?? []}
             cases={cases ?? []}
+            members={members}
             preselectedPlanId={sp.plan ?? null}
           />
         </div>
@@ -95,6 +106,12 @@ export default async function RunsPage({
                     r.test_run_results?.filter((x) => x.status !== 'pending').length ?? 0;
                   const passed =
                     r.test_run_results?.filter((x) => x.status === 'passed').length ?? 0;
+                  const mine =
+                    r.test_run_results?.filter((x) => x.assigned_to === userId).length ?? 0;
+                  const minePending =
+                    r.test_run_results?.filter(
+                      (x) => x.assigned_to === userId && x.status === 'pending'
+                    ).length ?? 0;
                   return (
                     <tr
                       key={r.id}
@@ -111,6 +128,17 @@ export default async function RunsPage({
                           <span className="ml-2 rounded bg-[color:var(--muted)] px-1.5 py-0.5 text-[10px] text-[color:var(--muted-foreground)]">
                             {r.environment}
                           </span>
+                        ) : null}
+                        {mine > 0 ? (
+                          <Link
+                            href={`/projects/${id}/runs/${r.id}?mine=1`}
+                            className="ml-2 inline-flex items-center gap-1 rounded-full border border-[color:var(--primary)]/40 bg-[color:var(--primary)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[color:var(--primary)] hover:bg-[color:var(--primary)]/20"
+                          >
+                            <UserCircle2 className="h-3 w-3" />
+                            {minePending > 0
+                              ? `${minePending} for you`
+                              : `${mine} assigned to you`}
+                          </Link>
                         ) : null}
                       </td>
                       <td className="px-4 py-3">

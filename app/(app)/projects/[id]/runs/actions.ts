@@ -12,6 +12,7 @@ const RunSchema = z.object({
   description: z.string().max(2000).optional(),
   environment: z.string().max(80).optional(),
   plan_id: z.string().uuid().optional().nullable(),
+  default_assignee_id: z.string().uuid().optional().nullable(),
 });
 
 export async function createRunAction(projectId: string, formData: FormData) {
@@ -21,6 +22,7 @@ export async function createRunAction(projectId: string, formData: FormData) {
     description: formData.get('description') || undefined,
     environment: formData.get('environment') || undefined,
     plan_id: (formData.get('plan_id') as string) || null,
+    default_assignee_id: (formData.get('default_assignee_id') as string) || null,
   });
   if (!parsed.success) return;
 
@@ -57,7 +59,12 @@ export async function createRunAction(projectId: string, formData: FormData) {
 
   if (caseIds.length > 0) {
     await supabase.from('test_run_results').insert(
-      caseIds.map((cid) => ({ run_id: run.id, case_id: cid, status: 'pending' as ResultStatus }))
+      caseIds.map((cid) => ({
+        run_id: run.id,
+        case_id: cid,
+        status: 'pending' as ResultStatus,
+        assigned_to: parsed.data.default_assignee_id ?? null,
+      }))
     );
   }
 
@@ -106,6 +113,80 @@ export async function setResultAction(formData: FormData) {
       executed_at: parsed.data.status === 'pending' ? null : new Date().toISOString(),
     })
     .eq('id', parsed.data.result_id);
+
+  revalidatePath(`/projects/${parsed.data.project_id}/runs/${parsed.data.run_id}`);
+}
+
+const AssignSchema = z.object({
+  result_id: z.string().uuid(),
+  run_id: z.string().uuid(),
+  project_id: z.string().uuid(),
+  assignee_id: z.string().uuid().nullable(),
+});
+
+// Assign (or unassign) a single result row. Only project owners / managers
+// can call this — RLS will reject anyone else.
+export async function assignResultAction(formData: FormData) {
+  const { userId } = await requireUser();
+  const parsed = AssignSchema.safeParse({
+    result_id: formData.get('result_id'),
+    run_id: formData.get('run_id'),
+    project_id: formData.get('project_id'),
+    assignee_id: (formData.get('assignee_id') as string) || null,
+  });
+  if (!parsed.success) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('test_run_results')
+    .update({ assigned_to: parsed.data.assignee_id })
+    .eq('id', parsed.data.result_id);
+
+  if (error) return;
+
+  await supabase.from('activity_log').insert({
+    project_id: parsed.data.project_id,
+    user_id: userId,
+    entity_type: 'test_run_result',
+    entity_id: parsed.data.result_id,
+    action: parsed.data.assignee_id ? 'assigned' : 'unassigned',
+    metadata: { assignee_id: parsed.data.assignee_id },
+  });
+
+  revalidatePath(`/projects/${parsed.data.project_id}/runs/${parsed.data.run_id}`);
+}
+
+// Bulk-assign every still-pending row in a run to a single tester.
+const BulkAssignSchema = z.object({
+  run_id: z.string().uuid(),
+  project_id: z.string().uuid(),
+  assignee_id: z.string().uuid().nullable(),
+});
+
+export async function bulkAssignRunAction(formData: FormData) {
+  const { userId } = await requireUser();
+  const parsed = BulkAssignSchema.safeParse({
+    run_id: formData.get('run_id'),
+    project_id: formData.get('project_id'),
+    assignee_id: (formData.get('assignee_id') as string) || null,
+  });
+  if (!parsed.success) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from('test_run_results')
+    .update({ assigned_to: parsed.data.assignee_id })
+    .eq('run_id', parsed.data.run_id)
+    .eq('status', 'pending');
+
+  await supabase.from('activity_log').insert({
+    project_id: parsed.data.project_id,
+    user_id: userId,
+    entity_type: 'test_run',
+    entity_id: parsed.data.run_id,
+    action: 'bulk_assigned',
+    metadata: { assignee_id: parsed.data.assignee_id },
+  });
 
   revalidatePath(`/projects/${parsed.data.project_id}/runs/${parsed.data.run_id}`);
 }

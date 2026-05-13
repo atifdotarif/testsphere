@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
+import { ConfirmButton } from '@/components/ui/confirm-button';
 import { createClient } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth';
 import PlanCasePicker from './plan-case-picker';
@@ -66,13 +67,13 @@ export default async function PlanDetailPage({
             <form action={deletePlanAction}>
               <input type="hidden" name="project_id" value={id} />
               <input type="hidden" name="plan_id" value={planId} />
-              <button
-                type="submit"
+              <ConfirmButton
+                message={`Delete plan “${plan.name}”? Existing runs created from it will keep their results but can no longer be re-launched from this plan.`}
                 className="inline-flex h-10 items-center gap-2 rounded-lg border border-[color:var(--destructive)]/40 px-3 text-sm font-medium text-[color:var(--destructive)] hover:bg-[color:var(--destructive)]/10"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
-              </button>
+              </ConfirmButton>
             </form>
           </div>
         }

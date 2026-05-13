@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, FlaskConical } from 'lucide-react';
+import { Plus, FlaskConical, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -23,7 +23,7 @@ export default async function CasesPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ suite?: string; q?: string }>;
+  searchParams: Promise<{ suite?: string; q?: string; tag?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -44,9 +44,19 @@ export default async function CasesPage({
         .order('updated_at', { ascending: false });
       if (sp.suite) q = q.eq('suite_id', sp.suite);
       if (sp.q) q = q.ilike('title', `%${sp.q}%`);
+      // Postgres array contains operator — RLS-safe, no client filter needed.
+      if (sp.tag) q = q.contains('tags', [sp.tag]);
       return await q;
     })(),
   ]);
+
+  // Build a unique tag cloud from the loaded cases for one-click filtering.
+  const tagsFromRows = cases ?? [];
+  const tagSet = new Set<string>();
+  for (const c of tagsFromRows as Array<{ tags: string[] }>) {
+    for (const t of c.tags ?? []) tagSet.add(t);
+  }
+  const allTags = Array.from(tagSet).sort();
 
   type CaseRow = {
     id: string;
@@ -67,12 +77,20 @@ export default async function CasesPage({
         title="Test cases"
         description="Reusable, versioned definitions of what to test."
         actions={
-          <Link href={`/projects/${id}/cases/new`}>
-            <Button>
-              <Plus className="h-4 w-4" />
-              New test case
-            </Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/projects/${id}/cases/generate`}>
+              <Button variant="outline">
+                <Sparkles className="h-4 w-4" />
+                Smart Test Generator
+              </Button>
+            </Link>
+            <Link href={`/projects/${id}/cases/new`}>
+              <Button>
+                <Plus className="h-4 w-4" />
+                New test case
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -107,28 +125,73 @@ export default async function CasesPage({
         </aside>
 
         <div>
-          <form className="mb-3" action={`/projects/${id}/cases`}>
-            {sp.suite ? <input type="hidden" name="suite" value={sp.suite} /> : null}
-            <input
-              name="q"
-              defaultValue={sp.q ?? ''}
-              placeholder="Search by title…"
-              className="h-9 w-full max-w-sm rounded-lg border border-[color:var(--input)] bg-[color:var(--card)] px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
-            />
-          </form>
+          <div className="mb-3 space-y-2">
+            <form action={`/projects/${id}/cases`} className="flex flex-wrap gap-2">
+              {sp.suite ? <input type="hidden" name="suite" value={sp.suite} /> : null}
+              {sp.tag ? <input type="hidden" name="tag" value={sp.tag} /> : null}
+              <input
+                name="q"
+                defaultValue={sp.q ?? ''}
+                placeholder="Search by title…"
+                className="h-9 w-full max-w-sm rounded-lg border border-[color:var(--input)] bg-[color:var(--card)] px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)]"
+              />
+              {(sp.q || sp.tag) ? (
+                <Link
+                  href={`/projects/${id}/cases${sp.suite ? `?suite=${sp.suite}` : ''}`}
+                  className="inline-flex h-9 items-center rounded-md border border-[color:var(--border)] px-3 text-xs text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)]"
+                >
+                  Clear filters
+                </Link>
+              ) : null}
+            </form>
+            {allTags.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="text-[color:var(--muted-foreground)]">Tags:</span>
+                {allTags.map((t) => {
+                  const params = new URLSearchParams();
+                  if (sp.suite) params.set('suite', sp.suite);
+                  if (sp.q) params.set('q', sp.q);
+                  if (sp.tag !== t) params.set('tag', t);
+                  const href = `/projects/${id}/cases${params.toString() ? `?${params}` : ''}`;
+                  const active = sp.tag === t;
+                  return (
+                    <Link
+                      key={t}
+                      href={href}
+                      className={
+                        active
+                          ? 'rounded-full border border-[color:var(--primary)] bg-[color:var(--primary)] px-2 py-0.5 font-medium text-white'
+                          : 'rounded-full border border-[color:var(--border)] bg-[color:var(--muted)] px-2 py-0.5 text-[color:var(--muted-foreground)] hover:bg-[color:var(--accent)] hover:text-[color:var(--accent-foreground)]'
+                      }
+                    >
+                      {t}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
 
           {rows.length === 0 ? (
             <EmptyState
               icon={<FlaskConical className="h-5 w-5" />}
               title="No test cases yet"
-              description="Author your first test case to start building your QA library."
+              description="Author cases by hand or use the Smart Test Generator to draft them from a GitHub repo."
               action={
-                <Link href={`/projects/${id}/cases/new`}>
-                  <Button>
-                    <Plus className="h-4 w-4" />
-                    New test case
-                  </Button>
-                </Link>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Link href={`/projects/${id}/cases/generate`}>
+                    <Button variant="outline">
+                      <Sparkles className="h-4 w-4" />
+                      Generate from a repo
+                    </Button>
+                  </Link>
+                  <Link href={`/projects/${id}/cases/new`}>
+                    <Button>
+                      <Plus className="h-4 w-4" />
+                      New test case
+                    </Button>
+                  </Link>
+                </div>
               }
             />
           ) : (

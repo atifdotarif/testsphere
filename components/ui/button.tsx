@@ -6,21 +6,21 @@ type Size = 'sm' | 'md' | 'lg' | 'icon';
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
-    'bg-[color:var(--primary)] text-[color:var(--primary-foreground)] hover:opacity-90 shadow-sm',
+    'bg-[color:var(--primary)] text-[color:var(--primary-foreground)] hover:bg-[color:var(--primary-hover)] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]',
   secondary:
-    'bg-[color:var(--muted)] text-[color:var(--foreground)] hover:bg-[color:var(--accent)]',
-  ghost: 'hover:bg-[color:var(--muted)] text-[color:var(--foreground)]',
+    'border border-[color:var(--border)] bg-[color:var(--card)] text-[color:var(--foreground)] hover:bg-[color:var(--muted)]',
+  ghost: 'text-[color:var(--foreground)] hover:bg-[color:var(--muted)]',
   destructive:
-    'bg-[color:var(--destructive)] text-[color:var(--destructive-foreground)] hover:opacity-90 shadow-sm',
+    'bg-[color:var(--destructive)] text-[color:var(--destructive-foreground)] hover:opacity-90',
   outline:
     'border border-[color:var(--border)] bg-transparent text-[color:var(--foreground)] hover:bg-[color:var(--muted)]',
 };
 
 const SIZE_CLASSES: Record<Size, string> = {
-  sm: 'h-8 px-3 text-sm rounded-md',
-  md: 'h-10 px-4 text-sm rounded-lg',
-  lg: 'h-11 px-6 text-base rounded-lg',
-  icon: 'h-9 w-9 rounded-md',
+  sm: 'h-7 px-2.5 text-xs rounded-md gap-1.5',
+  md: 'h-9 px-3.5 text-sm rounded-md gap-2',
+  lg: 'h-10 px-5 text-sm rounded-md gap-2',
+  icon: 'h-8 w-8 rounded-md',
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -36,7 +36,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
     <button
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center gap-2 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--background)] disabled:pointer-events-none disabled:opacity-50',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],
         className

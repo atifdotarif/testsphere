@@ -7,16 +7,19 @@ import { createRunAction } from './actions';
 
 type Plan = { id: string; name: string };
 type Case = { id: string; title: string };
+type Member = { id: string; full_name: string };
 
 export default function NewRunForm({
   projectId,
   plans,
   cases,
+  members,
   preselectedPlanId,
 }: {
   projectId: string;
   plans: Plan[];
   cases: Case[];
+  members: Member[];
   preselectedPlanId: string | null;
 }) {
   const [planId, setPlanId] = useState<string>(preselectedPlanId ?? '');
@@ -77,6 +80,21 @@ export default function NewRunForm({
       <div>
         <Label htmlFor="run-desc">Description</Label>
         <Textarea id="run-desc" name="description" rows={2} />
+      </div>
+
+      <div>
+        <Label htmlFor="default-assignee">Assign every case to (optional)</Label>
+        <Select id="default-assignee" name="default_assignee_id" defaultValue="">
+          <option value="">Leave unassigned</option>
+          {members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.full_name}
+            </option>
+          ))}
+        </Select>
+        <p className="mt-1 text-xs text-[color:var(--muted-foreground)]">
+          You can reassign individual cases after the run starts.
+        </p>
       </div>
 
       {!planId ? (

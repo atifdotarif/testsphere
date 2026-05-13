@@ -14,6 +14,10 @@ export default function BugForm({
   assignees: { id: string; full_name: string }[];
   initial?: {
     title?: string;
+    steps_to_reproduce?: string;
+    expected_result?: string;
+    actual_result?: string;
+    environment?: string;
     run_result_id?: string | null;
   };
 }) {
@@ -76,7 +80,12 @@ export default function BugForm({
 
       <div>
         <Label htmlFor="environment">Environment</Label>
-        <Input id="environment" name="environment" placeholder="staging / Chrome 130 / Win11" />
+        <Input
+          id="environment"
+          name="environment"
+          defaultValue={initial?.environment ?? ''}
+          placeholder="staging / Chrome 130 / Win11"
+        />
       </div>
 
       <div>
@@ -90,18 +99,29 @@ export default function BugForm({
           <Textarea
             id="steps_to_reproduce"
             name="steps_to_reproduce"
-            rows={5}
+            rows={6}
+            defaultValue={initial?.steps_to_reproduce ?? ''}
             placeholder={'1. Open /checkout\n2. ...'}
           />
         </div>
         <div className="space-y-3">
           <div>
             <Label htmlFor="expected_result">Expected</Label>
-            <Textarea id="expected_result" name="expected_result" rows={2} />
+            <Textarea
+              id="expected_result"
+              name="expected_result"
+              rows={2}
+              defaultValue={initial?.expected_result ?? ''}
+            />
           </div>
           <div>
             <Label htmlFor="actual_result">Actual</Label>
-            <Textarea id="actual_result" name="actual_result" rows={2} />
+            <Textarea
+              id="actual_result"
+              name="actual_result"
+              rows={2}
+              defaultValue={initial?.actual_result ?? ''}
+            />
           </div>
         </div>
       </div>

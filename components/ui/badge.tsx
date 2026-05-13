@@ -21,29 +21,46 @@ type Tone =
 
 const TONE_CLASSES: Record<Tone, string> = {
   default:
-    'bg-[color:var(--muted)] text-[color:var(--foreground)] border-[color:var(--border)]',
-  success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
-  warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
+    'bg-[color:var(--muted)] text-[color:var(--subtle-foreground)] border-[color:var(--border)]',
+  success:
+    'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
+  warning:
+    'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
   danger: 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20',
   info: 'bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20',
-  neutral: 'bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20',
+  neutral:
+    'bg-[color:var(--muted)] text-[color:var(--muted-foreground)] border-[color:var(--border)]',
   accent: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
+};
+
+const DOT_CLASSES: Record<Tone, string> = {
+  default: 'bg-[color:var(--muted-foreground)]',
+  success: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  danger: 'bg-red-500',
+  info: 'bg-sky-500',
+  neutral: 'bg-[color:var(--muted-foreground)]',
+  accent: 'bg-indigo-500',
 };
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   tone?: Tone;
+  dot?: boolean;
 }
 
-export function Badge({ className, tone = 'default', ...props }: BadgeProps) {
+export function Badge({ className, tone = 'default', dot = false, children, ...props }: BadgeProps) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+        'inline-flex items-center gap-1.5 rounded-full border px-2 py-px text-[11px] font-medium leading-5',
         TONE_CLASSES[tone],
         className
       )}
       {...props}
-    />
+    >
+      {dot ? <span className={cn('h-1.5 w-1.5 rounded-full', DOT_CLASSES[tone])} /> : null}
+      {children}
+    </span>
   );
 }
 

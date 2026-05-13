@@ -62,6 +62,16 @@ export type TestSuite = {
   created_at: string;
 };
 
+export type TestCaseSource = {
+  type: 'ai';
+  provider: string;
+  model: string;
+  repo?: string;
+  ref?: string | null;
+  files?: string[];
+  generated_at?: string;
+} | Record<string, unknown>;
+
 export type TestCase = {
   id: string;
   project_id: string;
@@ -73,6 +83,7 @@ export type TestCase = {
   priority: TestPriority;
   status: CaseStatus;
   tags: string[];
+  source: TestCaseSource | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -108,6 +119,7 @@ export type TestRunResult = {
   status: ResultStatus;
   notes: string | null;
   duration_ms: number | null;
+  assigned_to: string | null;
   executed_by: string | null;
   executed_at: string | null;
   created_at: string;
@@ -169,6 +181,7 @@ type InsertCase = Optional<
   | 'status'
   | 'tags'
   | 'steps'
+  | 'source'
   | 'created_at'
   | 'updated_at'
 >;
@@ -191,6 +204,7 @@ type InsertResult = Optional<
   | 'status'
   | 'notes'
   | 'duration_ms'
+  | 'assigned_to'
   | 'executed_by'
   | 'executed_at'
   | 'created_at'

@@ -19,11 +19,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .filter((p): p is { id: string; key: string; name: string } => Boolean(p));
 
   return (
-    <div className="flex min-h-screen">
+    // Clip the shell to the viewport so the sidebar never grows with the
+    // page and only the main column scrolls.
+    <div className="flex h-screen overflow-hidden">
       <Sidebar projects={projects} />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar profile={profile} />
-        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-[color:var(--background)] px-4 py-6 lg:px-8 lg:py-8">
+          {children}
+        </main>
       </div>
     </div>
   );

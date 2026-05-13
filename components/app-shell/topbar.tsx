@@ -1,7 +1,6 @@
-import { LogOut, User } from 'lucide-react';
+import { ChevronDown, LogOut, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { logoutAction } from '@/app/(auth)/actions';
 import type { Profile } from '@/lib/supabase/database.types';
 
@@ -15,34 +14,43 @@ const ROLE_LABEL: Record<Profile['role'], string> = {
 
 export function Topbar({ profile }: { profile: Profile }) {
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-[color:var(--border)] bg-[color:var(--card)]/80 px-4 backdrop-blur lg:px-6">
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-[color:var(--border)] bg-[color:var(--card)] px-4 lg:px-6">
       <div className="lg:hidden">
-        <Link href="/dashboard" className="text-sm font-semibold">
+        <Link href="/dashboard" className="text-sm font-semibold tracking-tight">
           Test Sphere
         </Link>
       </div>
-      <div className="flex flex-1 items-center justify-end gap-3">
-        <Badge tone="accent">{ROLE_LABEL[profile.role]}</Badge>
+
+      <div className="flex flex-1 items-center justify-end gap-1">
         <Link
           href="/settings"
-          className="hidden items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-[color:var(--muted)] sm:flex"
+          className="hidden h-9 items-center gap-2 rounded-md px-2 text-left hover:bg-[color:var(--muted)] sm:flex"
+          title="Account settings"
         >
           <Avatar name={profile.full_name} src={profile.avatar_url} size="sm" />
-          <div className="text-left text-xs">
-            <div className="font-medium leading-tight">{profile.full_name}</div>
-            <div className="leading-tight text-[color:var(--muted-foreground)]">
-              {profile.email}
+          <div className="text-xs leading-tight">
+            <div className="font-medium">{profile.full_name}</div>
+            <div className="text-[11px] text-[color:var(--muted-foreground)]">
+              {ROLE_LABEL[profile.role]}
             </div>
           </div>
-          <User className="h-4 w-4 text-[color:var(--muted-foreground)]" />
+          <ChevronDown className="h-3.5 w-3.5 text-[color:var(--muted-foreground)]" />
+        </Link>
+        <Link
+          href="/settings"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)] sm:hidden"
+          aria-label="Settings"
+        >
+          <Settings className="h-4 w-4" />
         </Link>
         <form action={logoutAction}>
           <button
             type="submit"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] px-3 text-sm hover:bg-[color:var(--muted)]"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[color:var(--muted-foreground)] hover:bg-[color:var(--muted)] hover:text-[color:var(--foreground)]"
+            aria-label="Sign out"
+            title="Sign out"
           >
             <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Sign out</span>
           </button>
         </form>
       </div>

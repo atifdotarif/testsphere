@@ -115,6 +115,16 @@ export async function updateBugAction(formData: FormData) {
   if (Object.keys(updates).length === 0) return;
 
   const supabase = await createClient();
+
+  // Snapshot the row *before* writing so the activity log can record a
+  // proper before/after diff per field (helps QA review status flow).
+  const { data: before } = await supabase
+    .from('bugs')
+    .select('status, severity, priority, assignee_id')
+    .eq('id', bugId)
+    .eq('project_id', projectId)
+    .maybeSingle();
+
   // Cast because the partial Update type requires keys to be optional fields.
   await supabase
     .from('bugs')
@@ -122,13 +132,38 @@ export async function updateBugAction(formData: FormData) {
     .eq('id', bugId)
     .eq('project_id', projectId);
 
+  // Build a structured diff (only fields that actually changed).
+  type BugSnapshot = {
+    status: string;
+    severity: string;
+    priority: string;
+    assignee_id: string | null;
+  };
+  const beforeRow = (before as BugSnapshot | null) ?? null;
+  const changes: Record<string, { from: unknown; to: unknown }> = {};
+  for (const [key, next] of Object.entries(updates)) {
+    if (key === 'closed_at') continue;
+    const prev =
+      beforeRow && key in beforeRow
+        ? (beforeRow as unknown as Record<string, unknown>)[key]
+        : null;
+    if (prev !== next) changes[key] = { from: prev, to: next };
+  }
+
+  // If the only thing that changed is `status`, label the action accordingly
+  // so the activity feed can render "X → Y" cleanly.
+  const action =
+    Object.keys(changes).length === 1 && 'status' in changes
+      ? 'status_changed'
+      : 'updated';
+
   await supabase.from('activity_log').insert({
     project_id: projectId,
     user_id: userId,
     entity_type: 'bug',
     entity_id: bugId,
-    action: 'updated',
-    metadata: updates,
+    action,
+    metadata: { changes },
   });
 
   revalidatePath(`/projects/${projectId}/bugs`);

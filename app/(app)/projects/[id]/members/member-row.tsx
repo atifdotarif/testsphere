@@ -2,6 +2,7 @@
 
 import { Avatar } from '@/components/ui/avatar';
 import { Badge, ROLE_TONES } from '@/components/ui/badge';
+import { ConfirmButton } from '@/components/ui/confirm-button';
 import { Select } from '@/components/ui/input';
 import { formatDate } from '@/lib/utils/format';
 import type { ProjectRole } from '@/lib/supabase/database.types';
@@ -63,12 +64,12 @@ export default function MemberRow({
           <form action={removeMemberAction}>
             <input type="hidden" name="project_id" value={projectId} />
             <input type="hidden" name="user_id" value={user.id} />
-            <button
-              type="submit"
+            <ConfirmButton
+              message={`Remove ${user.full_name} from this project? Their authored cases and filed bugs remain, but they lose access.`}
               className="text-xs font-medium text-[color:var(--destructive)] hover:underline"
             >
               Remove
-            </button>
+            </ConfirmButton>
           </form>
         </td>
       ) : null}

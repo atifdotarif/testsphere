@@ -34,18 +34,22 @@ export default async function ProjectLayout({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1280px] space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <span className="grid h-9 w-9 place-items-center rounded-lg bg-[color:var(--primary)]/10 text-sm font-semibold text-[color:var(--primary)]">
+        <span className="grid h-9 w-9 place-items-center rounded-md border border-[color:var(--border)] bg-[color:var(--muted)] text-[11px] font-semibold tracking-wider text-[color:var(--subtle-foreground)]">
           {project.key}
         </span>
         <div>
-          <div className="text-xs text-[color:var(--muted-foreground)]">Project</div>
-          <h1 className="text-xl font-semibold leading-tight">{project.name}</h1>
+          <div className="text-[11px] font-medium uppercase tracking-wider text-[color:var(--muted-foreground)]">
+            Project
+          </div>
+          <h1 className="text-xl font-semibold leading-tight tracking-tight">
+            {project.name}
+          </h1>
         </div>
       </div>
       <TabNav items={tabs} />
-      <div className="pt-2">{children}</div>
+      <div>{children}</div>
     </div>
   );
 }

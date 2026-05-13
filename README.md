@@ -15,7 +15,9 @@ Test Sphere lets QA teams:
   verified → closed` plus `reopened` and `wont_fix`);
 - collaborate via **comments** on bugs and a per-project **activity log**;
 - enforce **role-based access** (owner / manager / qa_engineer / developer /
-  viewer) at the database level using RLS policies.
+  viewer) at the database level using RLS policies;
+- draft test cases from a public GitHub repo with the **Smart Test Generator**
+  (OpenAI-backed), then review and edit before saving.
 
 ## Tech stack
 
@@ -26,6 +28,8 @@ Test Sphere lets QA teams:
 | Backend  | Supabase Postgres                                              |
 | Auth     | Supabase Auth (email + password) via `@supabase/ssr`           |
 | Security | Row-Level Security policies (per-project membership + role)    |
+| AI       | OpenAI Chat Completions with JSON-Schema structured outputs    |
+| Source   | GitHub REST API (`api.github.com` + `raw.githubusercontent.com`) |
 | Icons    | `lucide-react`                                                 |
 
 ## Project layout
@@ -38,6 +42,7 @@ app/
 │   ├── projects/               Project list, create, detail
 │   │   └── [id]/
 │   │       ├── cases/          Test cases & suites
+│   │       │   └── generate/   Smart Test Generator (GitHub + OpenAI)
 │   │       ├── plans/          Test plans
 │   │       ├── runs/           Test runs and execution UI
 │   │       ├── bugs/           Bug tracker (list, file, detail)
@@ -46,6 +51,8 @@ app/
 │   ├── bugs/                   "My bugs" cross-project
 │   ├── test-cases/             "My cases" cross-project
 │   └── settings/               Profile settings
+├── api/
+│   └── github/                 Repo tree + file content (server-side)
 ├── page.tsx                    Marketing landing page
 ├── layout.tsx                  Root layout (HTML, fonts)
 └── not-found.tsx
@@ -54,11 +61,14 @@ components/
 └── ui/                         Buttons, inputs, badges, cards, …
 lib/
 ├── supabase/                   Browser, server and proxy clients + types
+├── ai/                         OpenAI test-case generator
+├── github.ts                   GitHub REST client (parse URL, tree, files)
 ├── auth.ts                     `requireUser` / role helpers
 └── utils/                      `cn`, formatting helpers
 proxy.ts                        Next 16 proxy (auth gate, session refresh)
 supabase/
-└── schema.sql                  Full DB schema + RLS policies
+├── schema.sql                  Full DB schema + RLS policies
+└── migrations/                 Idempotent patches you can re-run
 ```
 
 ## Quickstart
@@ -146,6 +156,60 @@ client can't bypass them.
    case and link the defect to the failing result.
 2. Edit severity, priority, assignee and status from the right-hand sidebar of
    the bug detail page. Status changes go straight to the activity log.
+
+### Smart Test Generator (GitHub + OpenAI)
+
+Inside any project, click **Smart Test Generator** on the Test cases page (or
+visit `/projects/<id>/cases/generate`). The wizard walks you through:
+
+1. **Connect a repo.** Paste a GitHub URL (`https://github.com/owner/repo`,
+   `git@…`, or shorthand `owner/repo`). The server hits `GET /repos/:o/:r` for
+   metadata and `GET /git/trees/:ref?recursive=1` for the full tree in a single
+   call, then classifies blobs as `readme | doc | source | other`.
+2. **Pick files.** A virtualized picker lets you filter by path or kind. Each
+   file you select is fetched once from `raw.githubusercontent.com` and cached
+   in the browser. Files >300 KB are skipped, and individual files are capped
+   at 200 KB before being sent to the model.
+3. **Generate.** The selected files are passed to OpenAI Chat Completions with
+   a strict JSON Schema response format (`gpt-4o-mini` by default — change via
+   `OPENAI_MODEL`). The model is asked for 1–15 cases, optionally biased by a
+   "tester guidance" hint.
+4. **Review & save.** Each draft case is fully editable inline (title, steps,
+   expected, priority, tags). Discard the bad ones; the rest are inserted as
+   real test cases with status `draft` and a `source = {type:'ai', model, repo,
+   ref, files}` JSONB column for traceability.
+
+Sensible limits are enforced server-side regardless of what the UI sends:
+
+| Knob                 | Limit                          |
+| -------------------- | ------------------------------ |
+| Cases per generation | 1–15                           |
+| Documents per call   | 1–8                            |
+| Per-document chars   | 60,000 (Zod) / 12,000 to model |
+| Per-call output      | 4,000 output tokens            |
+
+#### Configuration
+
+```env
+OPENAI_API_KEY=sk-...        # required for the generator
+OPENAI_MODEL=gpt-4o-mini     # optional override
+GITHUB_TOKEN=ghp_...         # optional, raises rate limit 60→5,000/hr
+```
+
+#### Public API
+
+The generator's data layer is exposed as two route handlers (handy for
+debugging or reuse):
+
+| Method | Endpoint              | Body                                 | Returns                          |
+| ------ | --------------------- | ------------------------------------ | -------------------------------- |
+| `POST` | `/api/github/repo`    | `{ url, ref? }`                      | `{ meta, ref, files, truncated }`|
+| `POST` | `/api/github/file`    | `{ url, ref, path }`                 | `{ path, content, size, truncated }` |
+
+Both endpoints require an authenticated session (the `proxy.ts` layer rejects
+anonymous traffic on every route except the public marketing/auth pages).
+Generation itself is a Server Action (`generateCasesAction`), not a JSON API,
+because it always pairs with the in-app review step.
 
 ## Production checklist
 

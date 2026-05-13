@@ -52,6 +52,42 @@ export default async function BugDetailPage({
     .eq('bug_id', bugId)
     .order('created_at', { ascending: true });
 
+  // If this bug was filed from a failed test result, pull the run + case so
+  // the QA reviewer can trace exactly which execution surfaced it.
+  let linkedResult: {
+    resultId: string;
+    runId: string;
+    runName: string;
+    caseTitle: string;
+    status: string;
+  } | null = null;
+  if ((bug as { run_result_id?: string | null }).run_result_id) {
+    const rrId = (bug as { run_result_id: string }).run_result_id;
+    const { data: rr } = await supabase
+      .from('test_run_results')
+      .select(
+        'id, status, test_cases(title), test_runs(id, name)'
+      )
+      .eq('id', rrId)
+      .maybeSingle();
+    type RRRow = {
+      id: string;
+      status: string;
+      test_cases: { title: string } | null;
+      test_runs: { id: string; name: string } | null;
+    };
+    const r = rr as unknown as RRRow | null;
+    if (r && r.test_runs && r.test_cases) {
+      linkedResult = {
+        resultId: r.id,
+        runId: r.test_runs.id,
+        runName: r.test_runs.name,
+        caseTitle: r.test_cases.title,
+        status: r.status,
+      };
+    }
+  }
+
   type CommentRow = Pick<BugComment, 'id' | 'body' | 'created_at'> & {
     profiles: { full_name: string; avatar_url: string | null } | null;
   };
@@ -182,6 +218,7 @@ export default async function BugDetailPage({
           assignees={assignees}
           createdAt={b.created_at}
           closedAt={b.closed_at}
+          linkedResult={linkedResult}
         />
       </div>
     </div>

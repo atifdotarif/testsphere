@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { PlayCircle } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/input';
@@ -30,6 +32,7 @@ export default function BugSidebar({
   assignees,
   createdAt,
   closedAt,
+  linkedResult,
 }: {
   projectId: string;
   bugId: string;
@@ -42,9 +45,51 @@ export default function BugSidebar({
   assignees: { id: string; full_name: string }[];
   createdAt: string;
   closedAt: string | null;
+  linkedResult: {
+    resultId: string;
+    runId: string;
+    runName: string;
+    caseTitle: string;
+    status: string;
+  } | null;
 }) {
   return (
     <div className="space-y-4">
+      {linkedResult ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <PlayCircle className="h-4 w-4 text-[color:var(--primary)]" />
+              Linked test result
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-xs">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[color:var(--muted-foreground)]">
+                Case
+              </div>
+              <div className="font-medium">{linkedResult.caseTitle}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[color:var(--muted-foreground)]">
+                Run
+              </div>
+              <Link
+                href={`/projects/${projectId}/runs/${linkedResult.runId}`}
+                className="font-medium text-[color:var(--primary)] hover:underline"
+              >
+                {linkedResult.runName}
+              </Link>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[color:var(--muted-foreground)]">Result status</span>
+              <span className="rounded bg-[color:var(--muted)] px-1.5 py-0.5 font-medium capitalize">
+                {linkedResult.status.replace('_', ' ')}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Workflow</CardTitle>

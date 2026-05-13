@@ -16,39 +16,30 @@ export function StatCard({
   tone?: 'default' | 'success' | 'warning' | 'danger' | 'info';
   className?: string;
 }) {
-  const toneClass = {
-    default: 'bg-[color:var(--accent)] text-[color:var(--accent-foreground)]',
-    success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    danger: 'bg-red-500/10 text-red-700 dark:text-red-300',
-    info: 'bg-sky-500/10 text-sky-700 dark:text-sky-300',
+  const accentClass = {
+    default: 'text-[color:var(--foreground)]',
+    success: 'text-emerald-700 dark:text-emerald-300',
+    warning: 'text-amber-700 dark:text-amber-300',
+    danger: 'text-red-700 dark:text-red-300',
+    info: 'text-sky-700 dark:text-sky-300',
   }[tone ?? 'default'];
 
   return (
     <div
       className={cn(
-        'flex items-start justify-between rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-5 shadow-sm',
+        'flex flex-col gap-1 rounded-lg border border-[color:var(--border)] bg-[color:var(--card)] p-4',
         className
       )}
     >
-      <div>
-        <div className="text-sm font-medium text-[color:var(--muted-foreground)]">
-          {label}
-        </div>
-        <div className="mt-2 text-3xl font-semibold tracking-tight">{value}</div>
-        {hint ? (
-          <div className="mt-1 text-xs text-[color:var(--muted-foreground)]">{hint}</div>
-        ) : null}
+      <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-wider text-[color:var(--muted-foreground)]">
+        <span>{label}</span>
+        {icon ? <span className="text-[color:var(--muted-foreground)]">{icon}</span> : null}
       </div>
-      {icon ? (
-        <div
-          className={cn(
-            'grid h-10 w-10 place-items-center rounded-lg',
-            toneClass
-          )}
-        >
-          {icon}
-        </div>
+      <div className={cn('text-2xl font-semibold tabular-nums tracking-tight', accentClass)}>
+        {value}
+      </div>
+      {hint ? (
+        <div className="text-xs text-[color:var(--muted-foreground)]">{hint}</div>
       ) : null}
     </div>
   );

@@ -140,6 +140,7 @@ create table if not exists public.test_cases (
   priority        test_priority not null default 'medium',
   status          case_status not null default 'active',
   tags            text[] not null default '{}',
+  source          jsonb,
   created_by      uuid not null references public.profiles(id),
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
@@ -193,6 +194,7 @@ create table if not exists public.test_run_results (
   status       result_status not null default 'pending',
   notes        text,
   duration_ms  int,
+  assigned_to  uuid references public.profiles(id),
   executed_by  uuid references public.profiles(id),
   executed_at  timestamptz,
   created_at   timestamptz not null default now(),
@@ -201,6 +203,7 @@ create table if not exists public.test_run_results (
 
 create index if not exists idx_run_results_run on public.test_run_results(run_id);
 create index if not exists idx_run_results_case on public.test_run_results(case_id);
+create index if not exists idx_run_results_assignee on public.test_run_results(assigned_to);
 
 -- ---------------------------------------------------------------------
 -- Bugs & comments
@@ -512,13 +515,15 @@ create policy "run_results_select" on public.test_run_results
 drop policy if exists "run_results_modify" on public.test_run_results;
 create policy "run_results_modify" on public.test_run_results
   for all using (
-    exists (
+    assigned_to = auth.uid()
+    or exists (
       select 1 from public.test_runs r
       where r.id = run_id
         and public.has_project_role(auth.uid(), r.project_id, array['owner','manager','qa_engineer']::project_role[])
     )
   ) with check (
-    exists (
+    assigned_to = auth.uid()
+    or exists (
       select 1 from public.test_runs r
       where r.id = run_id
         and public.has_project_role(auth.uid(), r.project_id, array['owner','manager','qa_engineer']::project_role[])
