@@ -191,6 +191,38 @@ export async function bulkAssignRunAction(formData: FormData) {
   revalidatePath(`/projects/${parsed.data.project_id}/runs/${parsed.data.run_id}`);
 }
 
+// Reverse of completeRunAction — flips status back to `in_progress` and
+// clears completed_at so the run becomes editable again. Useful when
+// "Complete run" was clicked by mistake or when a regression appears and
+// the team wants to keep testing under the same run.
+export async function reopenRunAction(formData: FormData) {
+  const { userId } = await requireUser();
+  const projectId = formData.get('project_id') as string;
+  const runId = formData.get('run_id') as string;
+
+  const supabase = await createClient();
+  await supabase
+    .from('test_runs')
+    .update({
+      status: 'in_progress',
+      completed_at: null,
+    })
+    .eq('id', runId)
+    .eq('project_id', projectId);
+
+  await supabase.from('activity_log').insert({
+    project_id: projectId,
+    user_id: userId,
+    entity_type: 'test_run',
+    entity_id: runId,
+    action: 'reopened',
+    metadata: {},
+  });
+
+  revalidatePath(`/projects/${projectId}/runs/${runId}`);
+  revalidatePath(`/projects/${projectId}/runs`);
+}
+
 export async function completeRunAction(formData: FormData) {
   const { userId } = await requireUser();
   const projectId = formData.get('project_id') as string;

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Bug, CheckCircle2, Users, XCircle } from 'lucide-react';
+import { Bug, CheckCircle2, RotateCcw, Users, XCircle } from 'lucide-react';
 import { PageHeader } from '@/components/ui/page-header';
 import {
   Badge,
@@ -15,7 +15,7 @@ import { formatDateTime, formatRelative } from '@/lib/utils/format';
 import RunRow from './run-row';
 import BulkAssign from './bulk-assign';
 import RunFilters from './run-filters';
-import { completeRunAction } from '../actions';
+import { completeRunAction, reopenRunAction } from '../actions';
 import type {
   BugPriority,
   BugSeverity,
@@ -181,7 +181,9 @@ export default async function RunDetailPage({
         description={r.description ?? `Started by ${r.profiles?.full_name ?? 'someone'}`}
         actions={
           <div className="flex items-center gap-2">
-            <Badge tone={RUN_TONES[r.status]}>{r.status.replace('_', ' ')}</Badge>
+            <Badge tone={RUN_TONES[r.status]} dot>
+              {r.status.replace('_', ' ')}
+            </Badge>
             {r.status === 'in_progress' ? (
               <>
                 <form action={completeRunAction}>
@@ -190,7 +192,7 @@ export default async function RunDetailPage({
                   <input type="hidden" name="status" value="completed" />
                   <button
                     type="submit"
-                    className="inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-600 px-3 text-sm font-medium text-white hover:bg-emerald-700"
+                    className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-600 px-3 text-sm font-medium text-white hover:bg-emerald-700"
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     Complete run
@@ -202,13 +204,26 @@ export default async function RunDetailPage({
                   <input type="hidden" name="status" value="aborted" />
                   <button
                     type="submit"
-                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-[color:var(--border)] px-3 text-sm font-medium hover:bg-[color:var(--muted)]"
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] bg-[color:var(--card)] px-3 text-sm font-medium hover:bg-[color:var(--muted)]"
                   >
                     <XCircle className="h-4 w-4" />
                     Abort
                   </button>
                 </form>
               </>
+            ) : canManage ? (
+              <form action={reopenRunAction}>
+                <input type="hidden" name="project_id" value={id} />
+                <input type="hidden" name="run_id" value={runId} />
+                <button
+                  type="submit"
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-[color:var(--border)] bg-[color:var(--card)] px-3 text-sm font-medium hover:bg-[color:var(--muted)]"
+                  title="Reopen this run so testers can finish their cases"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Reopen run
+                </button>
+              </form>
             ) : null}
           </div>
         }
